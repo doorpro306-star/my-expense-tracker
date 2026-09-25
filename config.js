@@ -1,0 +1,1 @@
+window.GOOGLE_CONFIG={clientId:"YOUR_CLIENT_ID.apps.googleusercontent.com",apiKey:"YOUR_API_KEY",appId:"YOUR_GOOGLE_CLOUD_PROJECT_NUMBER"};
