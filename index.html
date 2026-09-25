@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="styles.css">
+<title>My Expenses</title>
+</head>
+<body>
+<header class="topbar">
+  <div>
+    <div class="eyebrow">PERSONAL EXPENSES</div>
+    <h1>My Expenses</h1>
+  </div>
+  <button id="installHelp" class="iconbtn" title="Install">＋</button>
+</header>
+
+<main>
+<section id="dashboard" class="screen active">
+  <div class="hero">
+    <div><span>This month</span><strong id="monthTotal">$0.00</strong></div>
+    <div><span>Tax</span><strong id="monthTax">$0.00</strong></div>
+    <div><span>Receipts</span><strong id="monthCount">0</strong></div>
+  </div>
+
+  <button class="primary big" id="addBtn">📷 Add receipt</button>
+
+  <div class="sectionhead"><h2>Recent expenses</h2><button id="allBtn" class="linkbtn">View all</button></div>
+  <div id="recentList" class="cards"></div>
+</section>
+
+<section id="add" class="screen">
+  <div class="sectionhead"><h2>Add receipt</h2><button class="linkbtn backBtn">Cancel</button></div>
+  <div class="captureGrid">
+    <label class="capture">
+      <span>📷</span><b>Take photo</b>
+      <input id="cameraInput" type="file" accept="image/*" capture="environment">
+    </label>
+    <label class="capture">
+      <span>🖼️</span><b>Choose photo</b>
+      <input id="photoInput" type="file" accept="image/*">
+    </label>
+    <label class="capture">
+      <span>📄</span><b>Choose PDF</b>
+      <input id="pdfInput" type="file" accept="application/pdf">
+    </label>
+  </div>
+  <div id="processing" class="processing hidden">
+    <div class="spinner"></div><b>Reading receipt…</b>
+    <p id="processingText">This can take a little longer for a blurry photo.</p>
+  </div>
+</section>
+
+<section id="review" class="screen">
+  <div class="sectionhead"><h2>Review expense</h2><button id="cancelReview" class="linkbtn">Cancel</button></div>
+  <div id="receiptPreview" class="receiptPreview"></div>
+  <form id="expenseForm">
+    <input type="hidden" id="expenseId">
+    <label>Supplier<input id="supplier"></label>
+    <div class="two"><label>Date<input id="expenseDate" type="date"></label><label>Invoice #<input id="invoiceNumber"></label></div>
+    <label>Category<select id="category"></select></label>
+    <div class="three">
+      <label>Subtotal<input id="subtotal" inputmode="decimal"></label>
+      <label>Tax<input id="tax" inputmode="decimal"></label>
+      <label>Total<input id="total" inputmode="decimal"></label>
+    </div>
+    <label>Payment method<input id="paymentMethod" placeholder="Visa, debit, cash…"></label>
+    <label>Notes<textarea id="notes" rows="3"></textarea></label>
+    <details><summary>OCR text</summary><pre id="ocrText"></pre></details>
+    <button class="primary big" type="submit">Save expense</button>
+    <button class="danger wide" type="button" id="deleteExpense">Delete</button>
+  </form>
+</section>
+
+<section id="expenses" class="screen">
+  <div class="sectionhead"><h2>Expenses</h2><button class="linkbtn backBtn">Back</button></div>
+  <input id="search" class="search" placeholder="Search supplier, category, invoice…">
+  <div class="filters"><select id="filterCategory"><option value="">All categories</option></select><select id="filterMonth"><option value="">All months</option></select></div>
+  <div id="expenseList" class="cards"></div>
+</section>
+
+<section id="reports" class="screen">
+  <div class="sectionhead"><h2>Reports</h2><button class="linkbtn backBtn">Back</button></div>
+  <div id="reportContent"></div>
+</section>
+
+<section id="settings" class="screen">
+  <div class="sectionhead"><h2>Backup & settings</h2><button class="linkbtn backBtn">Back</button></div>
+  <div class="settingCard">
+    <h3>Protect your receipts</h3>
+    <p>Receipts are stored on this device. Export a JSON backup regularly so you have a copy.</p>
+    <button class="primary wide" id="backupBtn">Export JSON backup</button>
+    <label class="secondary wide">Restore JSON backup<input id="restoreInput" type="file" accept="application/json"></label>
+  </div>
+  <div class="settingCard">
+    <h3>Spreadsheet</h3>
+    <p>Export your expenses as CSV for Excel or your accountant.</p>
+    <button class="secondary wide" id="csvBtn">Export CSV</button>
+  </div>
+</section>
+</main>
+
+<nav class="bottomnav">
+  <button data-screen="dashboard">⌂<small>Home</small></button>
+  <button data-screen="expenses">▤<small>Expenses</small></button>
+  <button data-screen="reports">▥<small>Reports</small></button>
+  <button data-screen="settings">⚙<small>Settings</small></button>
+</nav>
+
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
