@@ -1,1 +1,1 @@
-window.GOOGLE_CONFIG={clientId:"YOUR_CLIENT_ID.apps.googleusercontent.com",apiKey:"YOUR_API_KEY",appId:"YOUR_GOOGLE_CLOUD_PROJECT_NUMBER"};
+window.GOOGLE_CONFIG={clientId:"963025035772-qcts3slfnroj079t9ivp9j63f8gon55n.apps.googleusercontent.com",apiKey:"AIzaSyBkswcU9iOiHpjBJ4RDyuAArf6TEfoQ2qM",appId:"963025035772"};
