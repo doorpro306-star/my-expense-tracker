@@ -1,7 +1,189 @@
 const DB='ExpenseTrackerV2',STORE='expenses',CATS=['Fuel','Groceries / Food','Office Supplies','Business Supplies','Equipment','Vehicle','Advertising','Professional Services','Utilities','Travel','Repairs & Maintenance','Other'];let db,current=null,googleToken=null,tokenClient=null,gapiReady=false;const $=x=>document.getElementById(x),money=x=>Number(x||0).toLocaleString('en-CA',{style:'currency',currency:'CAD'}),today=()=>new Date().toISOString().slice(0,10),esc=s=>String(s??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 function openDB(){return new Promise((ok,no)=>{let r=indexedDB.open(DB,1);r.onupgradeneeded=()=>r.result.createObjectStore(STORE,{keyPath:'id'});r.onsuccess=()=>{db=r.result;ok()};r.onerror=()=>no(r.error)})}function all(){return new Promise(ok=>{let r=db.transaction(STORE).objectStore(STORE).getAll();r.onsuccess=()=>ok(r.result.sort((a,b)=>(b.date||'').localeCompare(a.date||'')))})}function put(x){return new Promise(ok=>{let r=db.transaction(STORE,'readwrite').objectStore(STORE).put(x);r.onsuccess=ok})}function remove(id){return new Promise(ok=>{let r=db.transaction(STORE,'readwrite').objectStore(STORE).delete(id);r.onsuccess=ok})}
 function show(id){document.querySelectorAll('.screen').forEach(x=>x.classList.toggle('active',x.id===id));if(id==='home')dashboard();if(id==='expenses')renderList();if(id==='reports')reports()}
-function extract(t){let lines=t.split(/\n+/).map(x=>x.trim()).filter(Boolean),supplier=lines.find(x=>/[A-Za-z]{3}/.test(x))||'',nums=[...t.matchAll(/(?:\$ ?)?(\d{1,6}[.,]\d{2})/g)].map(x=>+x[1].replace(',','.')),total=nums.at(-1)||0,tm=t.match(/(?:GST|HST|PST|TAX)\D{0,12}(\d+[.,]\d{2})/i),tax=tm?+tm[1].replace(',','.'):0,dm=t.match(/\b(20\d\d)[-/.](\d\d?)[-/.](\d\d?)\b/),date=dm?`${dm[1]}-${dm[2].padStart(2,'0')}-${dm[3].padStart(2,'0')}`:today(),q=supplier.toLowerCase(),category=q.includes('shell')||q.includes('esso')||q.includes('petro')?'Fuel':q.includes('staples')?'Office Supplies':q.includes('home depot')||q.includes('rona')?'Business Supplies':'Other';return{supplier,date,invoice:(t.match(/(?:invoice|receipt|inv)\s*#?\s*([A-Z0-9-]+)/i)||[])[1]||'',category,subtotal:Math.max(0,total-tax),tax,total,payment:'',notes:'',ocr:t}}
+function extract(t){
+  const text = String(t || '').replace(/\s+/g, ' ').trim();
+  const upper = text.toUpperCase();
+
+  // ---------- Supplier ----------
+  let supplier = '';
+
+  const suppliers = [
+    { match: /HOME\s*DEPOT|HOMEDEPOT\.COM/i, name: 'Home Depot' },
+    { match: /\bRONA\b/i, name: 'Rona' },
+    { match: /\bCANADIAN\s*TIRE\b/i, name: 'Canadian Tire' },
+    { match: /\bSTAPLES\b/i, name: 'Staples' },
+    { match: /\bCOSTCO\b/i, name: 'Costco' },
+    { match: /\bWALMART\b/i, name: 'Walmart' },
+    { match: /\bSHELL\b/i, name: 'Shell' },
+    { match: /\bESSO\b/i, name: 'Esso' },
+    { match: /PETRO[\s-]*CANADA/i, name: 'Petro-Canada' }
+  ];
+
+  for (const s of suppliers) {
+    if (s.match.test(text)) {
+      supplier = s.name;
+      break;
+    }
+  }
+
+  if (!supplier) {
+    const lines = String(t || '')
+      .split(/\n+/)
+      .map(x => x.trim())
+      .filter(Boolean);
+
+    supplier = lines.find(x =>
+      /[A-Za-z]{3}/.test(x) &&
+      !/^\d+\s/.test(x)
+    ) || '';
+  }
+
+  // ---------- Money helper ----------
+  function amount(labelRegex) {
+    const m = text.match(labelRegex);
+    if (!m) return 0;
+
+    return Math.round(
+      Number(m[1].replace(/,/g, '')) * 100
+    ) / 100;
+  }
+
+  // ---------- Receipt amounts ----------
+  const subtotal = amount(
+    /\bSUB\s*TOTAL\b\s*:?\s*\$?\s*([0-9,]+\.\d{2})/i
+  );
+
+  const gst = amount(
+    /\bGST(?:\/HST)?\b\s*:?\s*\$?\s*([0-9,]+\.\d{2})/i
+  );
+
+  const pst = amount(
+    /\b(?:PST|PST\/QST|QST)\b\s*:?\s*\$?\s*([0-9,]+\.\d{2})/i
+  );
+
+  let total = amount(
+    /\bTOTAL\b\s*:?\s*\$?\s*([0-9,]+\.\d{2})/i
+  );
+
+  // Avoid using payment-card TOTAL occurrences if the labelled
+  // receipt total wasn't found.
+  if (!total && subtotal) {
+    total = Math.round((subtotal + gst + pst) * 100) / 100;
+  }
+
+  const tax = Math.round((gst + pst) * 100) / 100;
+
+  // ---------- Date ----------
+  let date = today();
+
+  // Canadian receipt format: DD/MM/YYYY or DD/MM/YY
+  let dm = text.match(
+    /\b([0-3]?\d)\/([01]?\d)\/(\d{2,4})\b/
+  );
+
+  if (dm) {
+    let year = dm[3];
+
+    if (year.length === 2) {
+      year = '20' + year;
+    }
+
+    date =
+      year + '-' +
+      dm[2].padStart(2, '0') + '-' +
+      dm[1].padStart(2, '0');
+  } else {
+    dm = text.match(
+      /\b(20\d{2})[-/.](\d{1,2})[-/.](\d{1,2})\b/
+    );
+
+    if (dm) {
+      date =
+        dm[1] + '-' +
+        dm[2].padStart(2, '0') + '-' +
+        dm[3].padStart(2, '0');
+    }
+  }
+
+  // ---------- Invoice / receipt number ----------
+  const inv =
+    text.match(
+      /(?:INVOICE|RECEIPT|INV)\s*#?\s*:?\s*([A-Z0-9-]+)/i
+    );
+
+  const invoice = inv ? inv[1] : '';
+
+  // ---------- Payment ----------
+  let payment = '';
+
+  const card = text.match(
+    /X{4,}(\d{4})\s+(VISA|MASTERCARD|MC|AMEX)/i
+  );
+
+  if (card) {
+    let brand = card[2].toUpperCase();
+
+    if (brand === 'MC') brand = 'Mastercard';
+    else if (brand === 'VISA') brand = 'Visa';
+    else if (brand === 'AMEX') brand = 'Amex';
+
+    payment = brand + ' •••• ' + card[1];
+  }
+
+  // ---------- Category ----------
+  let category = 'Other';
+
+  const q = supplier.toLowerCase();
+
+  if (
+    q.includes('shell') ||
+    q.includes('esso') ||
+    q.includes('petro-canada')
+  ) {
+    category = 'Fuel';
+  } else if (q.includes('staples')) {
+    category = 'Office Supplies';
+  } else if (
+    q.includes('home depot') ||
+    q.includes('rona')
+  ) {
+    category = 'Business Supplies';
+  } else if (q.includes('canadian tire')) {
+    category = 'Vehicle';
+  }
+
+  // ---------- Validation ----------
+  let notes = '';
+
+  if (subtotal && total) {
+    const calculated =
+      Math.round((subtotal + gst + pst) * 100) / 100;
+
+    if (Math.abs(calculated - total) > 0.02) {
+      notes =
+        'CHECK TOTAL: subtotal + taxes = $' +
+        calculated.toFixed(2) +
+        ', receipt total = $' +
+        total.toFixed(2);
+    }
+  }
+
+  return {
+    supplier,
+    date,
+    invoice,
+    category,
+    subtotal,
+    tax,
+    gst,
+    pst,
+    total,
+    payment,
+    notes,
+    ocr: t
+  };
+}
 async function imageOCR(file){$('processing').classList.remove('hidden');try{let r=await Tesseract.recognize(file,'eng',{logger:m=>{if(m.status==='recognizing text')$('progress').textContent=Math.round(m.progress*100)+'%'}});current={id:crypto.randomUUID(),createdAt:new Date().toISOString(),...extract(r.data.text)};review()}finally{$('processing').classList.add('hidden')}}
 async function pdfRead(blob,name){$('processing').classList.remove('hidden');try{let p=await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs');p.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs';let pdf=await p.getDocument({data:await blob.arrayBuffer()}).promise,text='';for(let i=1;i<=pdf.numPages;i++){let pg=await pdf.getPage(i),c=await pg.getTextContent();text+=c.items.map(x=>x.str).join(' ')+'\n';$('progress').textContent=`page ${i}/${pdf.numPages}`}current={id:crypto.randomUUID(),createdAt:new Date().toISOString(),fileName:name,...extract(text)};review()}catch(e){alert('Could not read PDF: '+e.message)}finally{$('processing').classList.add('hidden')}}
 function review(){for(let k of ['supplier','date','invoice','category','subtotal','tax','total','payment','notes'])$(k).value=current[k]??'';$('ocr').textContent=current.ocr||'';show('review')}
