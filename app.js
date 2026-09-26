@@ -188,7 +188,39 @@ async function imageOCR(file){$('processing').classList.remove('hidden');try{let
 async function pdfRead(blob,name){$('processing').classList.remove('hidden');try{let p=await import('https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.min.mjs');p.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.10.38/pdf.worker.min.mjs';let pdf=await p.getDocument({data:await blob.arrayBuffer()}).promise,text='';for(let i=1;i<=pdf.numPages;i++){let pg=await pdf.getPage(i),c=await pg.getTextContent();text+=c.items.map(x=>x.str).join(' ')+'\n';$('progress').textContent=`page ${i}/${pdf.numPages}`}current={id:crypto.randomUUID(),createdAt:new Date().toISOString(),fileName:name,...extract(text)};review()}catch(e){alert('Could not read PDF: '+e.message)}finally{$('processing').classList.add('hidden')}}
 function review(){for(let k of ['supplier','date','invoice','category','subtotal','gst','pst','total','payment','notes'])$(k).value=current[k]??'';$('ocr').textContent=current.ocr||'';show('review')}
 function card(x){return `<button class="card" onclick="edit('${x.id}')"><div class="row"><b>${esc(x.supplier||'Unknown supplier')}</b><b>${money(x.total)}</b></div><div class="muted">${esc(x.date)} · ${esc(x.invoice||'No invoice #')}</div><span class="tag">${esc(x.category)}</span></button>`}
-async function dashboard(){let x=await all(),m=new Date().toISOString().slice(0,7),c=x.filter(a=>(a.date||'').startsWith(m));$('mTotal').textContent=money(c.reduce((s,a)=>s+(+a.total||0),0));$('mTax').textContent=money(c.reduce((s,a)=>s+(+a.tax||0),0));$('mCount').textContent=c.length;$('recent').innerHTML=x.slice(0,8).map(card).join('')||'<div class="panel">No expenses yet.</div>'}async function renderList(){let q=$('search').value.toLowerCase(),x=(await all()).filter(a=>!q||JSON.stringify(a).toLowerCase().includes(q));$('list').innerHTML=x.map(card).join('')}async function edit(id){current=(await all()).find(x=>x.id===id);review()}async function reports(){let x=await all(),groups={};x.forEach(a=>groups[a.category]=(groups[a.category]||0)+(+a.total||0));$('report').innerHTML=`<div class="panel"><b>Total ${money(x.reduce((s,a)=>s+(+a.total||0),0))}</b><p>Tax ${money(x.reduce((s,a)=>s+(+a.tax||0),0))}</p></div>`+Object.entries(groups).sort((a,b)=>b[1]-a[1]).map(x=>`<div class="card row"><span>${esc(x[0])}</span><b>${money(x[1])}</b></div>`).join('')}
+async function dashboard(){
+  let x=await all();
+
+  const currentYear=new Date().getFullYear();
+  const previousYear=currentYear-1;
+
+  function yearTotals(year){
+    const receipts=x.filter(a=>(a.date||'').startsWith(String(year)));
+
+    const total=receipts.reduce((s,a)=>s+(+a.total||0),0);
+    const gst=receipts.reduce((s,a)=>s+(+a.gst||0),0);
+    const pst=receipts.reduce((s,a)=>s+(+a.pst||0),0);
+
+    return{
+      year,
+      total,
+      gst,
+      pst,
+      tax:gst+pst,
+      count:receipts.length
+    };
+  }
+
+  const current=yearTotals(currentYear);
+  const previous=yearTotals(previousYear);
+
+  $('mTotal').textContent=money(current.total);
+  $('mTax').textContent=money(current.tax);
+  $('mCount').textContent=current.count;
+
+  $('recent').innerHTML=x.slice(0,8).map(card).join('')||
+    '<div class="panel">No expenses yet.</div>';
+}async function renderList(){let q=$('search').value.toLowerCase(),x=(await all()).filter(a=>!q||JSON.stringify(a).toLowerCase().includes(q));$('list').innerHTML=x.map(card).join('')}async function edit(id){current=(await all()).find(x=>x.id===id);review()}async function reports(){let x=await all(),groups={};x.forEach(a=>groups[a.category]=(groups[a.category]||0)+(+a.total||0));$('report').innerHTML=`<div class="panel"><b>Total ${money(x.reduce((s,a)=>s+(+a.total||0),0))}</b><p>Tax ${money(x.reduce((s,a)=>s+(+a.tax||0),0))}</p></div>`+Object.entries(groups).sort((a,b)=>b[1]-a[1]).map(x=>`<div class="card row"><span>${esc(x[0])}</span><b>${money(x[1])}</b></div>`).join('')}
 const SCOPES='https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/drive.file';async function ginit(){if(!window.GOOGLE_CONFIG||GOOGLE_CONFIG.clientId.includes('YOUR_'))throw Error('Google is not configured yet. Follow GOOGLE_SETUP.md.');if(gapiReady)return;await new Promise((ok,no)=>gapi.load('client:picker',{callback:ok,onerror:no}));await gapi.client.init({apiKey:GOOGLE_CONFIG.apiKey,discoveryDocs:['https://www.googleapis.com/discovery/v1/apis/gmail/v1/rest','https://www.googleapis.com/discovery/v1/apis/drive/v3/rest']});tokenClient=google.accounts.oauth2.initTokenClient({client_id:GOOGLE_CONFIG.clientId,scope:SCOPES,callback:()=>{}});gapiReady=true}async function auth(){await ginit();if(googleToken)return true;return new Promise(ok=>{tokenClient.callback=r=>{if(r.error)return ok(false);googleToken=r.access_token;gapi.client.setToken({access_token:googleToken});$('gstatus').textContent='Google connected';ok(true)};tokenClient.requestAccessToken({prompt:'consent'})})}
 async function drive(){try{if(!(await auth()))return;let v=new google.picker.DocsView(google.picker.ViewId.DOCS).setMimeTypes('application/pdf,image/jpeg,image/png,image/webp').setMode(google.picker.DocsViewMode.LIST);new google.picker.PickerBuilder().setDeveloperKey(GOOGLE_CONFIG.apiKey).setAppId(GOOGLE_CONFIG.appId).setOAuthToken(googleToken).addView(v).setCallback(async d=>{if(d.action!==google.picker.Action.PICKED)return;for(let f of d.docs||[]){let r=await fetch(`https://www.googleapis.com/drive/v3/files/${f.id}?alt=media`,{headers:{Authorization:'Bearer '+googleToken}});let b=await r.blob();(f.mimeType||'').includes('pdf')?await pdfRead(b,f.name):await imageOCR(new File([b],f.name,{type:f.mimeType}))}}).build().setVisible(true)}catch(e){alert(e.message)}}function atts(p,o=[]){if(p?.filename&&p?.body?.attachmentId)o.push(p);(p?.parts||[]).forEach(x=>atts(x,o));return o}async function gmail(){try{if(!(await auth()))return;$('gmailResults').innerHTML='<div class="panel">Searching Gmail…</div>';let r=await gapi.client.gmail.users.messages.list({userId:'me',q:'has:attachment (filename:pdf OR filename:jpg OR filename:jpeg OR filename:png) newer_than:2y',maxResults:25}),rows=[];for(let m of r.result.messages||[]){let f=await gapi.client.gmail.users.messages.get({userId:'me',id:m.id,format:'full'});atts(f.result.payload).forEach(p=>rows.push({mid:m.id,aid:p.body.attachmentId,name:p.filename,mime:p.mimeType}))}$('gmailResults').innerHTML=rows.map((x,i)=>`<button class="card gi" data-i="${i}"><b>${esc(x.name)}</b><div class="muted">Tap to import</div></button>`).join('')||'<div class="panel">No matching attachments.</div>';document.querySelectorAll('.gi').forEach(b=>b.onclick=()=>gimport(rows[+b.dataset.i]))}catch(e){alert('Gmail search failed: '+e.message)}}async function gimport(x){let r=await gapi.client.gmail.users.messages.attachments.get({userId:'me',messageId:x.mid,id:x.aid}),s=r.result.data.replace(/-/g,'+').replace(/_/g,'/');while(s.length%4)s+='=';let raw=atob(s),u=new Uint8Array(raw.length);for(let i=0;i<raw.length;i++)u[i]=raw.charCodeAt(i);let b=new Blob([u],{type:x.mime});x.mime.includes('pdf')?pdfRead(b,x.name):imageOCR(new File([b],x.name,{type:x.mime}))}
 function dl(n,t,s){let a=document.createElement('a');a.href=URL.createObjectURL(new Blob([s],{type:t}));a.download=n;a.click()}document.addEventListener('DOMContentLoaded',async()=>{await openDB();$('category').innerHTML=CATS.map(x=>`<option>${x}</option>`).join('');dashboard();$('camera').onchange=e=>e.target.files[0]&&imageOCR(e.target.files[0]);$('photo').onchange=e=>e.target.files[0]&&imageOCR(e.target.files[0]);$('pdf').onchange=e=>e.target.files[0]&&pdfRead(e.target.files[0],e.target.files[0].name);$('drive').onclick=drive;$('gmail').onclick=gmail;$('connect').onclick=async()=>{try{await auth()}catch(e){alert(e.message)}};$('disconnect').onclick=()=>{googleToken=null;gapi?.client?.setToken(null);$('gstatus').textContent='Not connected'};$('form').onsubmit=async e=>{e.preventDefault();for(let k of ['supplier','date','invoice','category','payment','notes'])current[k]=$(k).value;
