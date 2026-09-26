@@ -19,7 +19,15 @@
 <div><small>Receipts</small><b id="pCount">0</b></div>
 </div>
 
-<button class="primary big" onclick="show('add')">📷 Add / import receipt</button><h2>Recent expenses</h2><div id="recent"></div></section>
+<button class="primary big" onclick="show('add')">📷 Add / import receipt</button>
+
+<h2>Recent expenses</h2>
+<div id="recent"></div>
+
+<h2>Archived Years</h2>
+<div id="archives">
+<div class="panel">No archived years yet.</div>
+</div></section>
 <section id="add" class="screen"><div class="head"><h2>Add receipt</h2><button onclick="show('home')">Cancel</button></div><div class="grid">
 <label class="source">📷<b>Take photo</b><input id="camera" type="file" accept="image/*" capture="environment"></label>
 <label class="source">🖼️<b>Choose photo</b><input id="photo" type="file" accept="image/*"></label>
