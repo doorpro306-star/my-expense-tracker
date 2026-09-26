@@ -221,7 +221,7 @@ const archivedYears=[...new Set(
 $('archives').innerHTML=archivedYears.length
   ? archivedYears.map(year=>{
       const a=yearTotals(year);
-      return `<div class="panel">
+      return `<button class="panel" style="width:100%;text-align:left" onclick="openArchive(${year})">
         <h3>${year}</h3>
         <div class="stats">
           <div><small>Total Expenses</small><b>${money(a.total)}</b></div>
@@ -230,7 +230,7 @@ $('archives').innerHTML=archivedYears.length
           <div><small>Total Tax</small><b>${money(a.tax)}</b></div>
           <div><small>Receipts</small><b>${a.count}</b></div>
         </div>
-      </div>`;
+      </button>`;
     }).join('')
   : '<div class="panel">No archived years yet.</div>';  
 
