@@ -1,7 +1,22 @@
 <!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#111827"><link rel="manifest" href="manifest.webmanifest"><link rel="stylesheet" href="styles.css"><title>My Expenses</title></head>
 <body><header><div><small>PERSONAL EXPENSES</small><h1>My Expenses</h1></div><button id="install">＋</button></header>
 <main>
-<section id="home" class="screen active"><div class="stats"><div><small>This month</small><b id="mTotal">$0.00</b></div><div><small>Tax</small><b id="mTax">$0.00</b></div><div><small>Receipts</small><b id="mCount">0</b></div></div><button class="primary big" onclick="show('add')">📷 Add / import receipt</button><h2>Recent expenses</h2><div id="recent"></div></section>
+<section id="home" class="screen active"><div class="stats"><div><small id="currentYearLabel">Current Year</small><b id="mTotal">$0.00</b></div>
+<div><small>GST/HST</small><b id="mGST">$0.00</b></div>
+<div><small>PST/QST</small><b id="mPST">$0.00</b></div>
+<div><small>Total Tax</small><b id="mTax">$0.00</b></div>
+<div><small>Receipts</small><b id="mCount">0</b></div></div>
+
+<h2 id="previousYearLabel">Previous Year</h2>
+<div class="stats">
+<div><small>Total Expenses</small><b id="pTotal">$0.00</b></div>
+<div><small>GST/HST</small><b id="pGST">$0.00</b></div>
+<div><small>PST/QST</small><b id="pPST">$0.00</b></div>
+<div><small>Total Tax</small><b id="pTax">$0.00</b></div>
+<div><small>Receipts</small><b id="pCount">0</b></div>
+</div>
+
+<button class="primary big" onclick="show('add')">📷 Add / import receipt</button><h2>Recent expenses</h2><div id="recent"></div></section>
 <section id="add" class="screen"><div class="head"><h2>Add receipt</h2><button onclick="show('home')">Cancel</button></div><div class="grid">
 <label class="source">📷<b>Take photo</b><input id="camera" type="file" accept="image/*" capture="environment"></label>
 <label class="source">🖼️<b>Choose photo</b><input id="photo" type="file" accept="image/*"></label>
