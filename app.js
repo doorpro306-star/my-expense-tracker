@@ -213,6 +213,26 @@ async function dashboard(){
 
   const current=yearTotals(currentYear);
   const previous=yearTotals(previousYear);
+const archivedYears=[...new Set(
+  x.map(a=>parseInt((a.date||'').slice(0,4)))
+   .filter(y=>Number.isFinite(y)&&y<previousYear)
+)].sort((a,b)=>b-a);
+
+$('archives').innerHTML=archivedYears.length
+  ? archivedYears.map(year=>{
+      const a=yearTotals(year);
+      return `<div class="panel">
+        <h3>${year}</h3>
+        <div class="stats">
+          <div><small>Total Expenses</small><b>${money(a.total)}</b></div>
+          <div><small>GST/HST</small><b>${money(a.gst)}</b></div>
+          <div><small>PST/QST</small><b>${money(a.pst)}</b></div>
+          <div><small>Total Tax</small><b>${money(a.tax)}</b></div>
+          <div><small>Receipts</small><b>${a.count}</b></div>
+        </div>
+      </div>`;
+    }).join('')
+  : '<div class="panel">No archived years yet.</div>';  
 
  $('currentYearLabel').textContent=currentYear+' — Current Year';
 $('mTotal').textContent=money(current.total);
