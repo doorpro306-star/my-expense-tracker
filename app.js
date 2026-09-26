@@ -214,10 +214,19 @@ async function dashboard(){
   const current=yearTotals(currentYear);
   const previous=yearTotals(previousYear);
 
-  $('mTotal').textContent=money(current.total);
-  $('mTax').textContent=money(current.tax);
-  $('mCount').textContent=current.count;
+ $('currentYearLabel').textContent=currentYear+' — Current Year';
+$('mTotal').textContent=money(current.total);
+$('mGST').textContent=money(current.gst);
+$('mPST').textContent=money(current.pst);
+$('mTax').textContent=money(current.tax);
+$('mCount').textContent=current.count;
 
+$('previousYearLabel').textContent=previousYear+' — Previous Year';
+$('pTotal').textContent=money(previous.total);
+$('pGST').textContent=money(previous.gst);
+$('pPST').textContent=money(previous.pst);
+$('pTax').textContent=money(previous.tax);
+$('pCount').textContent=previous.count;
   $('recent').innerHTML=x.slice(0,8).map(card).join('')||
     '<div class="panel">No expenses yet.</div>';
 }async function renderList(){let q=$('search').value.toLowerCase(),x=(await all()).filter(a=>!q||JSON.stringify(a).toLowerCase().includes(q));$('list').innerHTML=x.map(card).join('')}async function edit(id){current=(await all()).find(x=>x.id===id);review()}async function reports(){let x=await all(),groups={};x.forEach(a=>groups[a.category]=(groups[a.category]||0)+(+a.total||0));$('report').innerHTML=`<div class="panel"><b>Total ${money(x.reduce((s,a)=>s+(+a.total||0),0))}</b><p>Tax ${money(x.reduce((s,a)=>s+(+a.tax||0),0))}</p></div>`+Object.entries(groups).sort((a,b)=>b[1]-a[1]).map(x=>`<div class="card row"><span>${esc(x[0])}</span><b>${money(x[1])}</b></div>`).join('')}
