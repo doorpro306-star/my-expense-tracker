@@ -28,6 +28,23 @@
 <div id="archives">
 <div class="panel">No archived years yet.</div>
 </div></section>
+  <section id="archiveDetail" class="screen">
+  <div class="head">
+    <h2 id="archiveTitle">Archived Year</h2>
+    <button onclick="show('home')">Back</button>
+  </div>
+
+  <div class="stats">
+    <div><small>Total Expenses</small><b id="aTotal">$0.00</b></div>
+    <div><small>GST/HST</small><b id="aGST">$0.00</b></div>
+    <div><small>PST/QST</small><b id="aPST">$0.00</b></div>
+    <div><small>Total Tax</small><b id="aTax">$0.00</b></div>
+    <div><small>Receipts</small><b id="aCount">0</b></div>
+  </div>
+
+  <h2>Receipts</h2>
+  <div id="archiveReceipts"></div>
+</section>
 <section id="add" class="screen"><div class="head"><h2>Add receipt</h2><button onclick="show('home')">Cancel</button></div><div class="grid">
 <label class="source">📷<b>Take photo</b><input id="camera" type="file" accept="image/*" capture="environment"></label>
 <label class="source">🖼️<b>Choose photo</b><input id="photo" type="file" accept="image/*"></label>
